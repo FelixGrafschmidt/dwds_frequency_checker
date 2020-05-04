@@ -3,10 +3,14 @@ package group.spontaneous.dwds_frequency_checker;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -22,29 +26,52 @@ public class Application {
 	private void init() {
 
 		List<String> words = new ArrayList<>();
-		try {
-			try (BufferedReader br = new BufferedReader(new FileReader("words.txt"))) {
-				String line;
-				while ((line = br.readLine()) != null) {
-					words.add(line);
-				}
+
+		try (BufferedReader br = new BufferedReader(new FileReader("words.txt"))) {
+			String line;
+			while ((line = br.readLine()) != null) {
+				words.add(line);
 			}
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 		var result = new ArrayList<String>();
-		var url = "https://www.dwds.de/api/frequency";
+		var url = "https://www.dwds.de/api/frequency?q=";
 
 		for (var word : words) {
 
-			var response = restTemplate.getForObject(url + "?q=" + word, DWDSFrequencyResponse.class);
+			var response = restTemplate.getForObject(url + word, DWDSFrequencyResponse.class);
 
 			if (response.getFrequency() >= 3) {
 				result.add(word);
+				System.out.println(word);
+			}
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 
-		System.out.println(result);
+		var mapper = new ObjectMapper();
+
+		try {
+
+			var fileContent = mapper.writeValueAsString(result);
+
+			var path = Paths.get("words.json");
+			var strToBytes = fileContent.getBytes();
+
+			Files.write(path, strToBytes);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.out.println(
+				"###########################\n###########################\n###########################\n###########################\n###########################\n");
+		System.exit(0);
 	}
 }
